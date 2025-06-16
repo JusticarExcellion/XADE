@@ -588,7 +588,24 @@ public class UIManager : MonoBehaviour
         {
             Decision.DefendingPiece.RequestDamage( Decision );
             ClearUI();
+            ReloadNameLabels();
         };
 
+    }
+
+    private void
+    ReloadNameLabels()
+    {
+        for(int i = 0; i < NumberOfLabels; ++i)
+        {
+            if(PieceLabels[i].Piece.Dead )
+            {
+                PieceLabels[i].Script.gameObject.SetActive( false );
+            }
+            else
+            {
+                PieceLabels[i].Script.gameObject.SetActive( true );
+            }
+        }
     }
 }

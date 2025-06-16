@@ -87,7 +87,6 @@ GameManager : MonoBehaviour
     private GamePiece HoverObject;
     private GamePiece TargetObject;
     private Vector3 MousePointOnFloor;
-    //TODO: Let's get the game pieces from those other objects as well
 
     private void
     Awake()
