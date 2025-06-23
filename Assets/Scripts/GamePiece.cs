@@ -307,7 +307,7 @@ GamePieceList
         MaxSize = newSize;
         InitiativePiece[] temp = List;
         List = new InitiativePiece[ MaxSize ];
-        for( int i = 0; i < List.Length; ++i )
+        for( int i = 0; i < temp.Length; ++i )
         {
             List[i] = temp[i];
         }

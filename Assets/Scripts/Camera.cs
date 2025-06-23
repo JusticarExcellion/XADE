@@ -44,17 +44,44 @@ CameraMovement : MonoBehaviour
         OffsetPosition.y = Mathf.Clamp( OffsetPosition.y, MinHeight, MaxHeight );
         CameraTransform.position = OffsetPosition;
 
+        Vector3 LookAtPosition = LookAtPoint.position;
+        Vector3 CameraVector = new Vector3();
         if( Input.GetMouseButton( 2 ) )
         {
             Vector3 MouseDelta = Input.mousePositionDelta;
-            Vector3 LookAtPosition = LookAtPoint.position;
-            Vector3 CameraVector = ( LookAtPoint.forward * -MouseDelta.y );
+            CameraVector += ( LookAtPoint.forward * -MouseDelta.y );
             CameraVector += ( LookAtPoint.right * -MouseDelta.x );
             CameraVector.y = 0;
-            CameraVector *= CameraMoveSpeed;
-            LookAtPosition += CameraVector;
-            LookAtPoint.position = LookAtPosition;
         }
+
+        if( !GameManager.Instance.IsCreatingCharacter() )
+        {
+
+            if( Input.GetKey( KeyCode.W ) )
+            {
+                CameraVector += LookAtPoint.forward;
+            }
+
+            if( Input.GetKey( KeyCode.A ) )
+            {
+                CameraVector += -LookAtPoint.right;
+            }
+
+            if( Input.GetKey( KeyCode.S ) )
+            {
+                CameraVector += -LookAtPoint.forward;
+            }
+
+            if( Input.GetKey( KeyCode.D ) )
+            {
+                CameraVector += LookAtPoint.right;
+            }
+
+        }
+
+        CameraVector *= CameraMoveSpeed;
+        LookAtPosition += CameraVector;
+        LookAtPoint.position = LookAtPosition;
 
         if( Input.GetKey( KeyCode.Q ) )
         {

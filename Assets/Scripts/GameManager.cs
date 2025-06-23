@@ -81,7 +81,7 @@ GameManager : MonoBehaviour
     private int  StartEditPieces;
     private bool StateSwitch;
     private bool Hovering;
-    private bool EditMode;
+    public  bool EditMode;
     private GamePiece  CurrentPiece;
     private GamePiece SelectedObject;
     private GamePiece HoverObject;
@@ -162,6 +162,7 @@ GameManager : MonoBehaviour
     private void
     Update()
     {
+        //TODO: add a measure mode
         if( Input.GetKeyDown( KeyCode.LeftControl ) )
         {
             if( !EditMode )
@@ -627,6 +628,19 @@ GameManager : MonoBehaviour
                     SelectedObject = null;
                 }
                 break;
+        }
+    }
+
+    public bool
+    IsCreatingCharacter()
+    {
+        if( Placement.Decision != null )
+        {
+            return ( Placement.State == PlacementOrder.Profile );
+        }
+        else
+        {
+            return false;
         }
     }
 }

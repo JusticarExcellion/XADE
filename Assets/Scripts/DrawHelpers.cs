@@ -78,4 +78,14 @@ public class DrawHelper : MonoBehaviour
         LR.endColor = color;
     }
 
+    //TODO: Create a Measure Mode where you can measure form one point to
+    //another, where you place 1 point and then you can measure the distance
+    //from that point to the mouse position in world space.
+    //
+    //ESC should get rid of the initial point, with a double escape exiting
+    //measure mode
+    public void
+    MeasureMode( Vector3 Point1, Vector3 Point2 )
+    {
+    }
 }
