@@ -46,7 +46,7 @@ PieceLabel
 }
 
 public class
-DamageRequest
+DamageRequest //TODO: Consider changing this so we can incorporate different things like healing, stat boosts, Damage, etc
 {
     public GamePiece AttackingPiece;
     public GamePiece DefendingPiece;
@@ -66,6 +66,9 @@ public class UIManager : MonoBehaviour
     private const string EditProfilePath           = "UI/EditCharacter";
     private const string ModeLabelPath             = "UI/ModeLabel";
     private const string DamageRequestPath         = "UI/DamageRequest";
+    private const string RadialPrefabPath          = "UI/Radial";
+    private const string GamePieceIconPath         = "Sprites/PieceIcon";
+    private const string ObstacleIconPath          = "Sprites/ObstaclesIcon";
 
     private VisualTreeAsset SurpriseDocument;
     private VisualTreeAsset CharacterProfileDocument;
@@ -77,6 +80,10 @@ public class UIManager : MonoBehaviour
     private GameObject PieceLabelPrefab;
     private GameObject DistanceCheckPrefab;
     private GameObject LabelModePrefab;
+    private GameObject RadialPrefab;
+
+    private Sprite GamePieceIcon;
+    private Sprite ObstacleIcon;
 
     [Header("UI Roots")]
     [SerializeField]
@@ -90,6 +97,7 @@ public class UIManager : MonoBehaviour
     private GameObject DistanceCheck;
     private Label_Distance DistanceLabel;
     private ModeLabel ModeLabel;
+    private GameObject RadialWheel;
 
     private void
     Awake()
@@ -114,6 +122,7 @@ public class UIManager : MonoBehaviour
     Initialize()
     {
         bool Valid = true;
+        RadialWheel = null;
         SurpriseDocument = Resources.Load<VisualTreeAsset>( SurpriseDocPath );
         if( !SurpriseDocument )
         {
@@ -163,7 +172,7 @@ public class UIManager : MonoBehaviour
             Valid = false;
         }
 
-        DistanceCheck = Instantiate( DistanceCheckPrefab, Canvas.transform );
+        DistanceCheck = Instantiate( DistanceCheckPrefab, CanvasTransform );
         if( !DistanceCheck )
         {
             Debug.LogError("ERROR: FAILED TO CREATE DISTANCE CHECK!!!");
@@ -191,7 +200,7 @@ public class UIManager : MonoBehaviour
             Valid = false;
         }
 
-        GameObject go = Instantiate( LabelModePrefab, Canvas.transform );
+        GameObject go = Instantiate( LabelModePrefab, CanvasTransform );
         ModeLabel = go.GetComponent<ModeLabel>();
         if( ModeLabel == null )
         {
@@ -204,6 +213,13 @@ public class UIManager : MonoBehaviour
         if( !DamageRequestDocument )
         {
             Debug.LogError("ERROR: DAMAGE REQUEST DOCUMENT NOT FONUD!!!");
+            Valid = false;
+        }
+
+        RadialPrefab = Resources.Load<GameObject>( RadialPrefabPath );
+        if( !RadialPrefab )
+        {
+            Debug.LogError("ERROR: RADIAL PREFAB NOT FONUD!!!");
             Valid = false;
         }
 
@@ -252,7 +268,7 @@ public class UIManager : MonoBehaviour
     public void
     DisplayBanner( string Text )
     {
-        GameObject go = Instantiate( BannerPrefab, Canvas.transform );
+        GameObject go = Instantiate( BannerPrefab, CanvasTransform );
         Banner BannerClass = go.GetComponent<Banner>();
         StartCoroutine( BannerClass.DisplayBannerText( Text ) );
     }
@@ -260,7 +276,7 @@ public class UIManager : MonoBehaviour
     public void
     DisplayBanner( string Text, Color BannerColor )
     {
-        GameObject go = Instantiate( BannerPrefab, Canvas.transform );
+        GameObject go = Instantiate( BannerPrefab, CanvasTransform );
         Banner BannerClass = go.GetComponent<Banner>();
         BannerClass.SetBannerColor( BannerColor );
         StartCoroutine( BannerClass.DisplayBannerText( Text ) );
@@ -392,7 +408,7 @@ public class UIManager : MonoBehaviour
     public void
     CreatePieceLabel( GamePiece GP )
     {
-        GameObject go = Instantiate( PieceLabelPrefab, Canvas.transform );
+        GameObject go = Instantiate( PieceLabelPrefab, CanvasTransform );
         NameLabel nl = go.GetComponent<NameLabel>();
         PieceLabels[NumberOfLabels].Label = go;
         PieceLabels[NumberOfLabels].Piece = GP;
@@ -607,5 +623,53 @@ public class UIManager : MonoBehaviour
                 PieceLabels[i].Script.gameObject.SetActive( true );
             }
         }
+    }
+
+    public void
+    CreateCreationRadial( PlacementMemory Memory )
+    {
+        if( RadialWheel != null )
+        {
+            Destroy( RadialWheel );
+            RadialWheel = null;
+        }
+
+        RadialWheel= Instantiate( RadialPrefab, CanvasTransform );
+        if( !RadialWheel )
+        {
+            Debug.LogError("ERROR: FAILED TO CREATE CREATION RADIAL!!!");
+        }
+        RadialMenu Menu = RadialWheel.GetComponent<RadialMenu>();
+
+        if( GamePieceIcon == null )
+        {
+            GamePieceIcon = Resources.Load<Sprite>( GamePieceIconPath );
+        }
+
+        if(ObstacleIcon == null)
+        {
+            ObstacleIcon = Resources.Load<Sprite>( ObstacleIconPath );
+        }
+
+        Menu.SetRadialButtonIcon( 0, GamePieceIcon );
+        Menu.SetRadialButtonIcon( 1, ObstacleIcon  );
+
+        Menu.CanvasTransform = CanvasTransform;
+        Menu.PivotPoint = Memory.Decision.SpawnPoint;
+
+        Menu.Buttons[0].Button.onClick.AddListener( delegate {
+                Debug.Log("Create Game Piece");
+                GameManager.Instance.AdvancePlacementState();
+                RadialWheel = null;
+                Menu.ClearRadial();
+                });
+
+        Menu.Buttons[1].Button.onClick.AddListener( delegate {
+                Debug.Log("Create Obstacle");
+
+                GameManager.Instance.AdvancePlacementState();
+                RadialWheel = null;
+                Menu.ClearRadial();
+                });
     }
 }

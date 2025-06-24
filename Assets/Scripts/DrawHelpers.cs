@@ -5,6 +5,7 @@ public class DrawHelper : MonoBehaviour
 {
     public static DrawHelper Instance;
     private LineRenderer LR;
+    private Material Line_MAT;
 
     private void
     Awake()
@@ -23,11 +24,13 @@ public class DrawHelper : MonoBehaviour
     Initialize()
     {
         LR = this.GetComponent<LineRenderer>();
+        Line_MAT = null;
         if( LR == null )
         {
             Debug.LogError("ERROR: LINE RENDERER NOT FOUND");
             return;
         }
+        Line_MAT = LR.material;
         LR.enabled = false;
     }
 
@@ -71,21 +74,27 @@ public class DrawHelper : MonoBehaviour
         UIManager.Manager.DisableLineDistance();
     }
 
+    public bool
+    DrawingLine()
+    {
+        return LR.enabled;
+    }
+
     public void
     SetLineColor( Color color )
     {
-        LR.startColor = color;
-        LR.endColor = color;
+        Line_MAT.color = color;
     }
 
-    //TODO: Create a Measure Mode where you can measure form one point to
-    //another, where you place 1 point and then you can measure the distance
-    //from that point to the mouse position in world space.
-    //
-    //ESC should get rid of the initial point, with a double escape exiting
-    //measure mode
     public void
-    MeasureMode( Vector3 Point1, Vector3 Point2 )
+    Measure( Vector3 Point1, Vector3 Point2 )
     {
+        LR.enabled = true;
+        Vector3 Direction = Point2 - Point1;
+        float Distance = Direction.magnitude;
+        Vector3 LineMidpoint = Vector3.Lerp( Point1, Point2, 0.5f );
+        LR.SetPosition( 0, Point1 );
+        LR.SetPosition( 1, Point2 );
+        UIManager.Manager.DisplayLineDistance( LineMidpoint, Distance );
     }
 }

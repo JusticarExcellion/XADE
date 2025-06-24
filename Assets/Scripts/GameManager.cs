@@ -29,6 +29,14 @@ GamePieceTurnOrder : int
     None
 }
 
+public enum
+EditorMode : int
+{
+    Play,
+    Edit,
+    Measure
+}
+
 public struct
 PlacementMemory
 {
@@ -81,12 +89,13 @@ GameManager : MonoBehaviour
     private int  StartEditPieces;
     private bool StateSwitch;
     private bool Hovering;
-    public  bool EditMode;
-    private GamePiece  CurrentPiece;
+    private GamePiece CurrentPiece;
     private GamePiece SelectedObject;
     private GamePiece HoverObject;
     private GamePiece TargetObject;
     private Vector3 MousePointOnFloor;
+    private Vector3 MeasurePivotPoint;
+    public  EditorMode EditorMode;
 
     private void
     Awake()
@@ -141,7 +150,9 @@ GameManager : MonoBehaviour
         SelectedObject = null;
         HoverObject = null;
         EditDecision = null;
+        MeasurePivotPoint = Vector3.zero;
         CurrentTurnState = GamePieceTurnOrder.None;
+        EditorMode = EditorMode.Play;
 
         Placement  = new PlacementMemory();
         Placement.Decision = null;
@@ -162,53 +173,70 @@ GameManager : MonoBehaviour
     private void
     Update()
     {
-        //TODO: add a measure mode
         if( Input.GetKeyDown( KeyCode.LeftControl ) )
         {
-            if( !EditMode )
+            if( EditorMode != EditorMode.Edit )
             {
                 UIManager.Manager.DisplayEditSign();
-                Debug.Log("Enable Edit Mode");
+                DisableMeasureMode();
                 StartEditPieces = NumberOfPieces;
-                EditMode = true;
+                EditorMode = EditorMode.Edit;
+                Debug.Log("Enable Edit Mode");
             }
             else
             {
-                Debug.Log("Disable Edit Mode");
                 StateSwitch = true; // Retriggers the current state of the object
-                EditMode = false;
+                EditorMode = EditorMode.Play;
                 UIManager.Manager.HideEditSign();
+                Debug.Log("Disable Edit Mode");
             }
+
         }
 
-        if( !EditMode )
+        if( Input.GetKeyDown( KeyCode.M ) && !IsCreatingCharacter() )
         {
-            FightRun();
+            EditorMode = EditorMode.Measure;
+            StateSwitch = true;
         }
-        else
-        {
-            if( Input.GetKeyDown( KeyCode.C ) && SelectedObject != null )
-            { //TODO: We Need to test and fix the many bugs that are inherent in going to edit mode while the UI is active
-                UIManager.Manager.ClearUI();
 
-                Debug.Log("Editing Character: \n" + SelectedObject.ToString() );
-                EditDecision = null;
-                EditDecision = ScriptableObject.CreateInstance<EditDecision>();
-                EditDecision.Request = SelectedObject.EditRequest();
-                EditDecision.Piece = SelectedObject;
-                EditDecision.Decided = false;
-                UIManager.Manager.DisplayEditCharacterScreen( EditDecision );
-            }
-            PlacementMode();
-            if( StartEditPieces != NumberOfPieces )
-            {
-                if( GetInitiative() )
-                {
-                    StartEditPieces = NumberOfPieces;
+        switch( EditorMode )
+        {
+            case EditorMode.Play:
+                FightRun();
+                break;
+            case EditorMode.Edit:
+                if( Input.GetKeyDown( KeyCode.C ) && SelectedObject != null )
+                { //TODO: We Need to test and fix the many bugs that are inherent in going to edit mode while the UI is active
+                    UIManager.Manager.ClearUI();
+
+                    Debug.Log("Editing Character: \n" + SelectedObject.ToString() );
+                    EditDecision = null;
+                    EditDecision = ScriptableObject.CreateInstance<EditDecision>();
+                    EditDecision.Request = SelectedObject.EditRequest();
+                    EditDecision.Piece = SelectedObject;
+                    EditDecision.Decided = false;
+                    UIManager.Manager.DisplayEditCharacterScreen( EditDecision );
                 }
-            }
-        }
+                PlacementMode();
+                if( StartEditPieces != NumberOfPieces )
+                {
+                    if( GetInitiative() )
+                    {
+                        StartEditPieces = NumberOfPieces;
+                    }
+                }
+                break;
+            case EditorMode.Measure:
+                if( StateSwitch )
+                {
+                    Debug.Log("Measure Mode");
+                    DrawHelper.Instance.SetLineColor( Color.green );
+                    StateSwitch = false;
+                }
+                MeasureMode();
+                break;
 
+        }
     }
 
     private void
@@ -266,7 +294,10 @@ GameManager : MonoBehaviour
             TargetObject = null;
             HoverObject = null;
             Hovering = false;
-            DrawHelper.Instance.SetLineColor( Color.blue );
+            if( DrawHelper.Instance.DrawingLine() )
+            {
+                DrawHelper.Instance.SetLineColor( Color.blue );
+            }
         }
 
         if( Physics.Raycast( WorldRay.origin, WorldRay.direction, out hit, 100f,  Terrain_LM ) )
@@ -290,21 +321,15 @@ GameManager : MonoBehaviour
             case PlacementOrder.Position:
                 if( Input.GetMouseButtonDown(1) )
                 {
-                    //Debug.Log("Screen Point: " + ScreenCoords );
-                    //Debug.Log("World Ray: " + WorldRay);
-
                     Vector3 ScreenCoords = Input.mousePosition;
                     Ray WorldRay =  Camera.main.ScreenPointToRay( ScreenCoords );
                     RaycastHit hit;
                     if( Physics.Raycast( WorldRay.origin, WorldRay.direction, out hit, 100f,  Terrain_LM ) )
                     {
-                        Debug.Log("Hit!");
                         Debug.Log("Contact Point: " + hit.point );
                         Placement.Decision.SpawnPoint = hit.point;
-                        Placement.State++;
-                        Placement.StateTransition = true;
+                        UIManager.Manager.CreateCreationRadial( Placement );
                     }
-                    Debug.Log("Right Mouse Button Pressed");
                 }
                 break;
 
@@ -642,6 +667,53 @@ GameManager : MonoBehaviour
         {
             return false;
         }
+    }
+
+    private void
+    MeasureMode()
+    {
+        if( Input.GetKeyDown( KeyCode.Escape ) )
+        {
+            if( MeasurePivotPoint != Vector3.zero )
+            {
+                MeasurePivotPoint = Vector3.zero;
+            }
+            else
+            {
+                DisableMeasureMode();
+                EditorMode = EditorMode.Play;
+                StateSwitch = true;
+            }
+        }
+
+        if( Input.GetMouseButtonDown( 0 ) )
+        {
+            MeasurePivotPoint = MousePointOnFloor;
+        }
+
+        if( MeasurePivotPoint != Vector3.zero )
+        {
+            DrawHelper.Instance.Measure( MeasurePivotPoint, MousePointOnFloor );
+        }
+        else
+        {
+            DrawHelper.Instance.DisableLine();
+        }
+    }
+
+    private void
+    DisableMeasureMode()
+    {
+        MeasurePivotPoint = Vector3.zero;
+        DrawHelper.Instance.SetLineColor( Color.blue );
+        DrawHelper.Instance.DisableLine();
+    }
+
+    public void
+    AdvancePlacementState()
+    {
+        Placement.State++;
+        Placement.StateTransition = true;
     }
 }
 
