@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 [System.Serializable]
 public struct
 RadialButton
 {
-    public string ButtonName;
+    public string Name;
     public Button Button;
     public Image  IconRenderer;
 }
@@ -19,10 +20,10 @@ RadialMenu : MonoBehaviour
 
     [SerializeField]
     private float ScaleFactor, MinScale, MaxScaleDistance;
+    public TMP_Text Label;
+    [HideInInspector]
     public Vector3 PivotPoint;
     public RadialButton[] Buttons;
-    //TODO: On hover we need to set a label in the middle to the name of the
-    //hovered over item
 
     private void
     Awake()
@@ -38,6 +39,18 @@ RadialMenu : MonoBehaviour
         for( int i = 0; i < Buttons.Length; ++i )
         {
             Buttons[ i ].IconRenderer.gameObject.SetActive( false );
+        }
+    }
+
+    private void
+    Start()
+    {
+        for( int i = 0; i < Buttons.Length; ++i )
+        {
+            if( Buttons[ i ].Name == "")
+            {
+                Buttons[i].Button.interactable = false;
+            }
         }
     }
 
@@ -77,5 +90,43 @@ RadialMenu : MonoBehaviour
                 );
 
         Menu.anchoredPosition = CanvasPoint;
+    }
+
+    public void
+    SetLabelText( int ButtonIndex )
+    {
+        if( ButtonIndex < 0 || ButtonIndex > Buttons.Length )
+        {
+            Debug.LogError("ERROR: TRYING TO ACCESS RADIAL BUTTON BEYOND THE BOUNDS");
+            return;
+        }
+
+        Label.gameObject.SetActive( true );
+        if( Buttons[ButtonIndex].Button.interactable )
+        {
+            Label.text = Buttons[ButtonIndex].Name;
+        }
+        else
+        {
+            ClearLabelText();
+        }
+    }
+
+    public void
+    ClearLabelText()
+    {
+        Label.gameObject.SetActive( false );
+        Label.text = "";
+    }
+
+    public void
+    SetRadialButtonName( int ButtonIndex, string Name )
+    {
+        if( ButtonIndex < 0 || ButtonIndex > Buttons.Length )
+        {
+            Debug.LogError("ERROR: TRYING TO ACCESS RADIAL BUTTON BEYOND THE BOUNDS");
+            return;
+        }
+        Buttons[ ButtonIndex ].Name = Name;
     }
 }

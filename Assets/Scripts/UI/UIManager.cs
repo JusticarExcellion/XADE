@@ -653,6 +653,8 @@ public class UIManager : MonoBehaviour
 
         Menu.SetRadialButtonIcon( 0, GamePieceIcon );
         Menu.SetRadialButtonIcon( 1, ObstacleIcon  );
+        Menu.SetRadialButtonName( 0, "Create New Piece" );
+        Menu.SetRadialButtonName( 1, "Create New Obstacle" );
 
         Menu.CanvasTransform = CanvasTransform;
         Menu.PivotPoint = Memory.Decision.SpawnPoint;
