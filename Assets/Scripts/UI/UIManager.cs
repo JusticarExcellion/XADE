@@ -46,11 +46,11 @@ PieceLabel
 }
 
 public class
-DamageRequest //TODO: Consider changing this so we can incorporate different things like healing, stat boosts, Damage, etc
+ActionRequest //TODO: Consider changing this so we can incorporate different things like healing, stat boosts, Damage, etc
 {
-    public GamePiece AttackingPiece;
-    public GamePiece DefendingPiece;
-    public int Damage;
+    public GamePiece SourcePiece;
+    public GamePiece DestinationPiece;
+    public int Health;
     public bool Decided;
 }
 
@@ -66,15 +66,19 @@ public class UIManager : MonoBehaviour
     private const string EditProfilePath           = "UI/EditCharacter";
     private const string ModeLabelPath             = "UI/ModeLabel";
     private const string DamageRequestPath         = "UI/DamageRequest";
+    private const string HealRequestDocumentPath   = "UI/HealRequest";
     private const string RadialPrefabPath          = "UI/Radial";
     private const string GamePieceIconPath         = "Sprites/PieceIcon";
     private const string ObstacleIconPath          = "Sprites/ObstaclesIcon";
+    private const string AttackIconPath            = "Sprites/AttackIcon";
+    private const string HealingIconPath           = "Sprites/HealingIcon";
 
     private VisualTreeAsset SurpriseDocument;
     private VisualTreeAsset CharacterProfileDocument;
     private VisualTreeAsset InitiativeDocument;
     private VisualTreeAsset EditCharacterDocument;
     private VisualTreeAsset DamageRequestDocument;
+    private VisualTreeAsset HealRequestDocument;
 
     private GameObject BannerPrefab;
     private GameObject PieceLabelPrefab;
@@ -84,6 +88,8 @@ public class UIManager : MonoBehaviour
 
     private Sprite GamePieceIcon;
     private Sprite ObstacleIcon;
+    private Sprite AttackIcon;
+    private Sprite HealingIcon;
 
     [Header("UI Roots")]
     [SerializeField]
@@ -213,6 +219,13 @@ public class UIManager : MonoBehaviour
         if( !DamageRequestDocument )
         {
             Debug.LogError("ERROR: DAMAGE REQUEST DOCUMENT NOT FONUD!!!");
+            Valid = false;
+        }
+
+        HealRequestDocument = Resources.Load<VisualTreeAsset>( HealRequestDocumentPath );
+        if( !HealRequestDocument )
+        {
+            Debug.LogError("ERROR: HEAL REQUEST DOCUMENT NOT FONUD!!!");
             Valid = false;
         }
 
@@ -575,7 +588,7 @@ public class UIManager : MonoBehaviour
     }
 
     public void
-    DisplayDamageRequest( DamageRequest Decision )
+    DisplayDamageRequest( ActionRequest Decision )
     {
         SourceAsset.visualTreeAsset = DamageRequestDocument;
 
@@ -588,7 +601,7 @@ public class UIManager : MonoBehaviour
         DamageField.value = 0;
         DamageField.RegisterCallback<ChangeEvent<int>>( ( evt ) =>
             {
-                Decision.Damage = evt.newValue;
+                Decision.Health = evt.newValue;
             }
         );
 
@@ -602,12 +615,48 @@ public class UIManager : MonoBehaviour
 
         Submit.clicked += () =>
         {
-            Decision.DefendingPiece.RequestDamage( Decision );
+            Decision.DestinationPiece.RequestDamage( Decision );
             ClearUI();
             ReloadNameLabels();
         };
 
     }
+
+    public void
+    DisplayHealRequest( ActionRequest Decision )
+    {
+        SourceAsset.visualTreeAsset = HealRequestDocument;
+
+        IntegerField DamageField = UQueryExtensions.Q<IntegerField>( SourceAsset.rootVisualElement,"Healing");
+        if( DamageField == null  )
+        {
+            Debug.LogError("ERROR: NO HEALING FIELD FOUND!!!");
+            return;
+        }
+        DamageField.value = 0;
+        DamageField.RegisterCallback<ChangeEvent<int>>( ( evt ) =>
+            {
+                Decision.Health = evt.newValue;
+            }
+        );
+
+
+        Button Submit = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Submit");
+        if( Submit == null )
+        {
+            Debug.LogError("ERROR: NO SUBMIT BUTTON FOUND!!!");
+            return;
+        }
+
+        Submit.clicked += () =>
+        {
+            Decision.DestinationPiece.RequestHealing( Decision );
+            ClearUI();
+            ReloadNameLabels();
+        };
+
+    }
+
 
     private void
     ReloadNameLabels()
@@ -670,6 +719,55 @@ public class UIManager : MonoBehaviour
                 Debug.Log("Create Obstacle");
 
                 GameManager.Instance.AdvancePlacementState();
+                RadialWheel = null;
+                Menu.ClearRadial();
+                });
+    }
+
+    public void
+    CreateActionRadial( ActionRequest Decision )
+    {
+        if( RadialWheel != null )
+        {
+            Destroy( RadialWheel );
+            RadialWheel = null;
+        }
+
+        RadialWheel= Instantiate( RadialPrefab, CanvasTransform );
+        if( !RadialWheel )
+        {
+            Debug.LogError("ERROR: FAILED TO CREATE CREATION RADIAL!!!");
+        }
+        RadialMenu Menu = RadialWheel.GetComponent<RadialMenu>();
+
+        if( AttackIcon == null )
+        {
+            AttackIcon = Resources.Load<Sprite>( AttackIconPath );
+        }
+
+        if( HealingIcon == null)
+        {
+            HealingIcon = Resources.Load<Sprite>( HealingIconPath );
+        }
+
+        Menu.SetRadialButtonIcon( 0, AttackIcon    );
+        Menu.SetRadialButtonIcon( 1, HealingIcon   );
+        Menu.SetRadialButtonName( 0, "Attack Game Piece" );
+        Menu.SetRadialButtonName( 1, "Heal GamePiece" );
+
+        Menu.CanvasTransform = CanvasTransform;
+        Menu.PivotPoint = Decision.DestinationPiece.transform.position;
+
+        Menu.Buttons[0].Button.onClick.AddListener( delegate {
+                Debug.Log("Attack Piece");
+                DisplayDamageRequest( Decision );
+                RadialWheel = null;
+                Menu.ClearRadial();
+                });
+
+        Menu.Buttons[1].Button.onClick.AddListener( delegate {
+                Debug.Log("Heal Piece");
+                DisplayHealRequest( Decision );
                 RadialWheel = null;
                 Menu.ClearRadial();
                 });

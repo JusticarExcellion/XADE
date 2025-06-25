@@ -162,14 +162,25 @@ GamePiece : MonoBehaviour
     }
 
     public void
-    RequestDamage( DamageRequest Request )
+    RequestDamage( ActionRequest Request )
     {
-        Debug.Log( $"{Request.AttackingPiece.Name} attacks {Request.DefendingPiece.Name} for {Request.Damage:N} damage" );
-        Health -= Request.Damage;
+        Debug.Log( $"{Request.SourcePiece.Name} attacks {Request.DestinationPiece.Name} for {Request.Health:N} damage" );
+        Health -= Request.Health;
         if( Health <= 0 )
         {
             Dead = true;
             Renderer.gameObject.SetActive( false );
+        }
+    }
+
+    public void
+    RequestHealing( ActionRequest Request )
+    {
+        Debug.Log( $"{Request.SourcePiece.Name} heals {Request.DestinationPiece.Name} for {Request.Health:N} health" );
+        Health +=Request.Health;
+        if( Health > MaxHealth )
+        {
+            Health = MaxHealth;
         }
     }
 

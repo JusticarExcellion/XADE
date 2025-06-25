@@ -497,10 +497,10 @@ GameManager : MonoBehaviour
             {
                 if( TargetObject != null )
                 {
-                    DamageRequest Request = new DamageRequest();
-                    Request.AttackingPiece = CurrentPiece;
-                    Request.DefendingPiece = TargetObject;
-                    UIManager.Manager.DisplayDamageRequest( Request );
+                    ActionRequest Request = new ActionRequest();
+                    Request.SourcePiece     = CurrentPiece;
+                    Request.DestinationPiece = TargetObject;
+                    UIManager.Manager.CreateActionRadial( Request );
                 }
                 else
                 {
