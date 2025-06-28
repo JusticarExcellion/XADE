@@ -54,7 +54,7 @@ CameraMovement : MonoBehaviour
             CameraVector.y = 0;
         }
 
-        if( !GameManager.Instance.IsCreatingCharacter() )
+        if( !UIManager.Manager.TextModeActive() )
         {
 
             if( Input.GetKey( KeyCode.W ) )

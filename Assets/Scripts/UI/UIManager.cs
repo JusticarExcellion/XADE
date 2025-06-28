@@ -1001,4 +1001,10 @@ public class UIManager : MonoBehaviour
         };
 
     }
+
+    public bool
+    TextModeActive()
+    {
+        return SourceAsset.visualTreeAsset != null;
+    }
 }

@@ -193,12 +193,12 @@ GameManager : MonoBehaviour
 
         }
 
-        if( Input.GetKeyDown( KeyCode.Backspace) )
+        if( Input.GetKeyDown( KeyCode.Backspace) && !UIManager.Manager.TextModeActive() )
         {
             UIManager.Manager.ShowMusicBrowser();
         }
 
-        if( Input.GetKeyDown( KeyCode.M ) && !IsCreatingCharacter() )
+        if( Input.GetKeyDown( KeyCode.M ) && !UIManager.Manager.TextModeActive() )
         {
             EditorMode = EditorMode.Measure;
             StateSwitch = true;
@@ -656,19 +656,6 @@ GameManager : MonoBehaviour
                     SelectedObject = null;
                 }
                 break;
-        }
-    }
-
-    public bool
-    IsCreatingCharacter()
-    {
-        if( Placement.Decision != null )
-        {
-            return ( Placement.State == PlacementOrder.Profile );
-        }
-        else
-        {
-            return false;
         }
     }
 
