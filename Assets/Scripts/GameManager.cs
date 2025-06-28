@@ -193,6 +193,11 @@ GameManager : MonoBehaviour
 
         }
 
+        if( Input.GetKeyDown( KeyCode.Backspace) )
+        {
+            UIManager.Manager.ShowMusicBrowser();
+        }
+
         if( Input.GetKeyDown( KeyCode.M ) && !IsCreatingCharacter() )
         {
             EditorMode = EditorMode.Measure;
@@ -332,7 +337,6 @@ GameManager : MonoBehaviour
                     }
                 }
                 break;
-
             case PlacementOrder.Profile:
                 if( Placement.StateTransition )
                 {
@@ -347,7 +351,6 @@ GameManager : MonoBehaviour
                     Placement.StateTransition = true;
                 }
                 break;
-
             case PlacementOrder.Creation:
                 CreateNewGamePiece( Placement );
                 Placement.State = 0;

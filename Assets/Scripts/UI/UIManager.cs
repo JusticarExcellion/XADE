@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using System;
+using System.Collections.Generic;
 
 public class
 SurpriseDecision : ScriptableObject //NOTE: This Sucks
@@ -67,11 +68,14 @@ public class UIManager : MonoBehaviour
     private const string ModeLabelPath             = "UI/ModeLabel";
     private const string DamageRequestPath         = "UI/DamageRequest";
     private const string HealRequestDocumentPath   = "UI/HealRequest";
+    private const string MusicBrowserDocumentPath  = "UI/MusicBrowser";
     private const string RadialPrefabPath          = "UI/Radial";
     private const string GamePieceIconPath         = "Sprites/PieceIcon";
     private const string ObstacleIconPath          = "Sprites/ObstaclesIcon";
     private const string AttackIconPath            = "Sprites/AttackIcon";
     private const string HealingIconPath           = "Sprites/HealingIcon";
+    private const string PlayButtonIconPath        = "Sprites/PlayIcon";
+    private const string PauseButtonIconPath       = "Sprites/PauseIcon";
 
     private VisualTreeAsset SurpriseDocument;
     private VisualTreeAsset CharacterProfileDocument;
@@ -79,6 +83,7 @@ public class UIManager : MonoBehaviour
     private VisualTreeAsset EditCharacterDocument;
     private VisualTreeAsset DamageRequestDocument;
     private VisualTreeAsset HealRequestDocument;
+    private VisualTreeAsset MusicBrowserDocument;
 
     private GameObject BannerPrefab;
     private GameObject PieceLabelPrefab;
@@ -90,20 +95,27 @@ public class UIManager : MonoBehaviour
     private Sprite ObstacleIcon;
     private Sprite AttackIcon;
     private Sprite HealingIcon;
+    private Sprite PlayIcon;
+    private Sprite PauseIcon;
 
     [Header("UI Roots")]
     [SerializeField]
     private UIDocument SourceAsset;
     [SerializeField]
     private GameObject Canvas;
-    private RectTransform CanvasTransform;
 
+    [Header("Music Browser")]
+    [SerializeField]
+    private VisualTreeAsset MusicListItem;
+
+    private RectTransform CanvasTransform;
     private PieceLabel[] PieceLabels;
     private int NumberOfLabels;
     private GameObject DistanceCheck;
     private Label_Distance DistanceLabel;
     private ModeLabel ModeLabel;
     private GameObject RadialWheel;
+
 
     private void
     Awake()
@@ -218,21 +230,42 @@ public class UIManager : MonoBehaviour
         DamageRequestDocument = Resources.Load<VisualTreeAsset>( DamageRequestPath );
         if( !DamageRequestDocument )
         {
-            Debug.LogError("ERROR: DAMAGE REQUEST DOCUMENT NOT FONUD!!!");
+            Debug.LogError("ERROR: DAMAGE REQUEST DOCUMENT NOT FOUND!!!");
             Valid = false;
         }
 
         HealRequestDocument = Resources.Load<VisualTreeAsset>( HealRequestDocumentPath );
         if( !HealRequestDocument )
         {
-            Debug.LogError("ERROR: HEAL REQUEST DOCUMENT NOT FONUD!!!");
+            Debug.LogError("ERROR: HEAL REQUEST DOCUMENT NOT FOUND!!!");
             Valid = false;
         }
 
         RadialPrefab = Resources.Load<GameObject>( RadialPrefabPath );
         if( !RadialPrefab )
         {
-            Debug.LogError("ERROR: RADIAL PREFAB NOT FONUD!!!");
+            Debug.LogError("ERROR: RADIAL PREFAB NOT FOUND!!!");
+            Valid = false;
+        }
+
+        MusicBrowserDocument = Resources.Load<VisualTreeAsset>( MusicBrowserDocumentPath );
+        if( !MusicBrowserDocument )
+        {
+            Debug.LogError("ERROR: MUSIC BROWSER NOT FOUND!!!");
+            Valid = false;
+        }
+
+        PlayIcon  = Resources.Load<Sprite>( PlayButtonIconPath  );
+        if( !PlayIcon )
+        {
+            Debug.LogError("ERROR: PLAY ICON NOT FOUND!!!");
+            Valid = false;
+        }
+
+        PauseIcon = Resources.Load<Sprite>( PauseButtonIconPath );
+        if( !PauseIcon )
+        {
+            Debug.LogError("ERROR: PAUSE ICON NOT FOUND!!!");
             Valid = false;
         }
 
@@ -771,5 +804,201 @@ public class UIManager : MonoBehaviour
                 RadialWheel = null;
                 Menu.ClearRadial();
                 });
+    }
+
+    public void
+    ShowMusicBrowser()
+    {
+        SourceAsset.visualTreeAsset = MusicBrowserDocument;
+
+        Background PlayButtonIcon = new Background();
+        PlayButtonIcon.sprite = PlayIcon;
+
+        /****************Grabbing Lists and Tabs****************/
+        ListView MusicList = UQueryExtensions.Q<ListView>( SourceAsset.rootVisualElement,"MusicList");
+        ListView AmbienceList = UQueryExtensions.Q<ListView>( SourceAsset.rootVisualElement,"AmbienceList");
+        TabView BrowserTabView = UQueryExtensions.Q<TabView>( SourceAsset.rootVisualElement,"AudioTabs");
+
+        /****************Setting up lists and tabs****************/
+        List<AudioFileDetails> First5_Music = AudioManager.Instance.MusicFiles.GrabSet( 0 );
+
+        Func<VisualElement> MB_MakeItem = () => MusicListItem.Instantiate();
+        Action<VisualElement, int> MB_MusicBindItem = ( e, i ) => {
+            e.dataSource = First5_Music[i];
+            Debug.Log($"Data Sourced: {AudioManager.Instance.MusicFiles.Files[i].Name}");
+        };
+
+        MusicList.selectedIndicesChanged += ( newIndex ) =>
+        {
+            Debug.Log($"New Item Selected: {AudioManager.Instance.MusicFiles.Files[MusicList.selectedIndex].Name}");
+        };
+
+        MusicList.makeItem = MB_MakeItem;
+        MusicList.bindItem = MB_MusicBindItem;
+        MusicList.itemsSource = First5_Music;
+        MusicList.ClearSelection();
+
+        List<AudioFileDetails> First5_Ambience = AudioManager.Instance.AmbienceFiles.GrabSet( 0 );
+
+        Action<VisualElement, int> MB_AmbienceBindItem = ( e, i ) => {
+            e.dataSource = First5_Ambience[i];
+            Debug.Log($"Data Sourced: {AudioManager.Instance.AmbienceFiles.Files[i].Name}");
+        };
+
+        AmbienceList.selectedIndicesChanged += ( newIndex ) =>
+        {
+            Debug.Log($"New Item Selected: {AudioManager.Instance.AmbienceFiles.Files[AmbienceList.selectedIndex].Name}");
+        };
+
+        AmbienceList.makeItem = MB_MakeItem;
+        AmbienceList.bindItem = MB_AmbienceBindItem;
+        AmbienceList.itemsSource = First5_Ambience;
+        AmbienceList.ClearSelection();
+
+
+        /****************Getting and Setting up buttons****************/
+        Button NextButton = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Next");
+        Button PrevButton = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Previous");
+        Button PlayButton = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Play");
+        Button PlayPrevButton = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"PlayPrev");
+        Button PlayNextButton = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"PlayNext");
+        Button ExitButton = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Exit");
+
+        if( NextButton == null )
+        {
+            Debug.LogError("ERROR: NEXT BUTTON NOT FOUND ON MUSIC BROWSER!!!");
+        }
+
+        if( PrevButton == null )
+        {
+            Debug.LogError("ERROR: PREVIOUS BUTTON NOT FOUND ON MUSIC BROWSER!!!");
+        }
+
+        if( PlayButton == null )
+        {
+            Debug.LogError("ERROR: PREVIOUS BUTTON NOT FOUND ON MUSIC BROWSER!!!");
+        }
+
+        if( PlayPrevButton == null )
+        {
+            Debug.LogError("ERROR: PLAY PREVIOUS BUTTON NOT FOUND ON MUSIC BROWSER!!!");
+        }
+
+        if( PlayNextButton == null )
+        {
+            Debug.LogError("ERROR: PLAY NEXT BUTTON NOT FOUND ON MUSIC BROWSER!!!");
+        }
+
+        if( ExitButton == null )
+        {
+            Debug.LogError("ERROR: EXIT BUTTON NOT FOUND ON MUSIC BROWSER!!!");
+        }
+
+        PlayButton.iconImage = PlayButtonIcon;
+
+        NextButton.clicked += () =>
+        {
+            if( BrowserTabView.selectedTabIndex != 1 )
+            {
+                First5_Music = AudioManager.Instance.MusicFiles.GrabNextSet();
+                MusicList.RefreshItems();
+            }
+            else
+            {
+                First5_Ambience = AudioManager.Instance.AmbienceFiles.GrabNextSet();
+                AmbienceList.RefreshItems();
+            }
+        };
+
+        PrevButton.clicked += () =>
+        {
+            if( BrowserTabView.selectedTabIndex != 1 )
+            {
+                First5_Music = AudioManager.Instance.MusicFiles.GrabPrevSet();
+                MusicList.RefreshItems();
+            }
+            else
+            {
+                First5_Ambience = AudioManager.Instance.AmbienceFiles.GrabPrevSet();
+                AmbienceList.RefreshItems();
+            }
+        };
+
+        BrowserTabView.activeTabChanged += ( prevTab, NewTab ) => {
+            if( BrowserTabView.selectedTabIndex != 1 )
+            {
+                if( !AudioManager.Instance.IsMusicPlaying() )
+                {
+                    PlayButtonIcon.sprite = PlayIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+                else
+                {
+                    PlayButtonIcon.sprite = PauseIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+            }
+            else
+            {
+                if( !AudioManager.Instance.IsAmbiencePlaying() )
+                {
+                    PlayButtonIcon.sprite = PlayIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+                else
+                {
+                    PlayButtonIcon.sprite = PauseIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+            }
+        };
+
+        PlayButton.clicked += () =>
+        {
+            if( BrowserTabView.selectedTabIndex != 1 )
+            {
+                AudioManager.Instance.SetMusicTrack( AudioManager.Instance.MusicFiles.LoadClip( true, MusicList.selectedIndex ) );
+                AudioManager.Instance.SetMusicPlay();
+            }
+            else
+            {
+                AudioManager.Instance.SetAmbienceTrack( AudioManager.Instance.AmbienceFiles.LoadClip( false, AmbienceList.selectedIndex ) );
+                AudioManager.Instance.SetAmbiencePlay();
+            }
+
+            if( BrowserTabView.selectedTabIndex != 1 )
+            {
+                if( !AudioManager.Instance.IsMusicPlaying() )
+                {
+                    PlayButtonIcon.sprite = PlayIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+                else
+                {
+                    PlayButtonIcon.sprite = PauseIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+            }
+            else
+            {
+                if( !AudioManager.Instance.IsAmbiencePlaying() )
+                {
+                    PlayButtonIcon.sprite = PlayIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+                else
+                {
+                    PlayButtonIcon.sprite = PauseIcon;
+                    PlayButton.iconImage = PlayButtonIcon;
+                }
+            }
+
+        };
+
+        ExitButton.clicked += () =>
+        {
+            ClearUI();
+        };
+
     }
 }
