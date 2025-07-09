@@ -98,6 +98,7 @@ public class UIManager : MonoBehaviour
     private Sprite PlayIcon;
     private Sprite PauseIcon;
 
+
     [Header("UI Roots")]
     [SerializeField]
     private UIDocument SourceAsset;
@@ -331,11 +332,20 @@ public class UIManager : MonoBehaviour
     public void
     DisplayCharacterProfile( PlacementMemory PlacementMemory )
     {
+        //TODO: Add profile browser functionality, load all profiles,
+        //display them, etc.
         SourceAsset.visualTreeAsset = CharacterProfileDocument;
         Button Submit = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Submit");
         if( Submit == null )
         {
             Debug.LogError("ERROR: NO SUBMIT BUTTON FOUND!!!");
+            return;
+        }
+
+        Button GenerateProfile = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"GenerateProfile");
+        if( GenerateProfile == null )
+        {
+            Debug.LogError("ERROR: NO GENERATE PROFILE BUTTON FOUND!!!");
             return;
         }
 
@@ -406,6 +416,10 @@ public class UIManager : MonoBehaviour
 
 
         Submit.clicked += () => { PlacementMemory.Decision.Decided = true; };
+        GenerateProfile.clicked += () => { DataManager.Instance.SaveProfile( in PlacementMemory.Decision.Piece );  };
+
+        List<PieceRequest> InMemoryProfiles  = DataManager.Instance.LoadAllProfiles();
+        //TODO: Set the Data Source for the Profile Browser
     }
 
     public void
@@ -1006,5 +1020,15 @@ public class UIManager : MonoBehaviour
     TextModeActive()
     {
         return SourceAsset.visualTreeAsset != null;
+    }
+
+    public void
+    CreateNewProfile()
+    {
+    }
+
+    public void
+    LoadAllProfiles()
+    {
     }
 }

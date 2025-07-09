@@ -120,6 +120,8 @@ AudioManager : MonoBehaviour
         AmbienceSource.outputAudioMixerGroup = Mixers;
         MusicSource.volume = .5f;
         AmbienceSource.volume = .25f;
+        MusicSource.loop = true;
+        AmbienceSource.loop = true;
         GetAllAudioTracksFromResources();
         return Valid;
     }

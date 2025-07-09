@@ -46,11 +46,16 @@ GamePiece : MonoBehaviour
     private const float PieceSpeed = 0.5f;
     private MeshRenderer Renderer;
     private NavMeshAgent Agent;
+    private CapsuleCollider Collider;
+    //TODO: Need to be able to revive an entity via some kind of entity manager
+    //screen, maybe we should also be able to see their corpse or something on
+    //the screen and just default them to some kind of death position/animation
 
     private void
     Awake()
     {
         Agent = this.gameObject.AddComponent<NavMeshAgent>();
+        Collider = this.gameObject.GetComponent<CapsuleCollider>();
     }
 
     private void
@@ -112,37 +117,56 @@ GamePiece : MonoBehaviour
         }
     }
 
-    //TODO: Set this value to a fixed ID
     public void
     OnObjectHover()
     {
-        Material[] Materials = Renderer.materials;
-        Material Outline_Mat = Materials[1];
-        Outline_Mat.SetColor( "_Color", Color.white );
+        this.gameObject.layer = LayerMask.NameToLayer("Active");
+        foreach( Transform child in MyTransform )
+        {
+            child.gameObject.layer = LayerMask.NameToLayer("Active");
+        }
     }
 
     public void
     OnObjectTarget()
     {
-        Material[] Materials = Renderer.materials;
-        Material Outline_Mat = Materials[1];
-        Outline_Mat.SetColor( "_Color", Color.red );
+        this.gameObject.layer = LayerMask.NameToLayer("Enemy");
+        foreach( Transform child in MyTransform )
+        {
+            child.gameObject.layer = LayerMask.NameToLayer("Enemy");
+        }
     }
 
     public void
     OnObjectExit()
     {
-        Material[] Materials = Renderer.materials;
-        Material Outline_Mat = Materials[1];
-        Outline_Mat.SetColor( "_Color", Color.black );
+        switch( Alignment )
+        {
+            case Faction.Allies:
+                gameObject.layer = LayerMask.NameToLayer("Friendly");
+                foreach( Transform child in MyTransform )
+                {
+                    child.gameObject.layer = LayerMask.NameToLayer("Friendly");
+                }
+                break;
+            case Faction.Enemy:
+                gameObject.layer = LayerMask.NameToLayer("Enemy");
+                foreach( Transform child in MyTransform )
+                {
+                    child.gameObject.layer = LayerMask.NameToLayer("Enemy");
+                }
+                break;
+        }
     }
 
     public void
     OnObjectSelect()
     {
-        Material[] Materials = Renderer.materials;
-        Material Outline_Mat = Materials[1];
-        Outline_Mat.SetColor( "_Color", Color.grey );
+        this.gameObject.layer = LayerMask.NameToLayer("Active");
+        foreach( Transform child in MyTransform )
+        {
+            child.gameObject.layer = LayerMask.NameToLayer("Active");
+        }
     }
 
     public PieceRequest
@@ -169,6 +193,7 @@ GamePiece : MonoBehaviour
         if( Health <= 0 )
         {
             Dead = true;
+            //TODO: Deactivate Collider
             Renderer.gameObject.SetActive( false );
         }
     }
