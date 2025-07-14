@@ -108,6 +108,9 @@ public class UIManager : MonoBehaviour
     [Header("Music Browser")]
     [SerializeField]
     private VisualTreeAsset MusicListItem;
+    [Header("Profile Browser")]
+    [SerializeField]
+    private VisualTreeAsset ProfileListItem;
 
     private RectTransform CanvasTransform;
     private PieceLabel[] PieceLabels;
@@ -332,8 +335,6 @@ public class UIManager : MonoBehaviour
     public void
     DisplayCharacterProfile( PlacementMemory PlacementMemory )
     {
-        //TODO: Add profile browser functionality, load all profiles,
-        //display them, etc.
         SourceAsset.visualTreeAsset = CharacterProfileDocument;
         Button Submit = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Submit");
         if( Submit == null )
@@ -349,12 +350,33 @@ public class UIManager : MonoBehaviour
             return;
         }
 
+        Button LoadProfile = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"LoadProfile");
+        if( LoadProfile == null )
+        {
+            Debug.LogError("ERROR: NO LOAD PROFILE BUTTON FOUND!!!");
+            return;
+        }
+        Button DeleteProfile = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"DeleteProfile");
+        if( DeleteProfile == null )
+        {
+            Debug.LogError("ERROR: NO DELETE PROFILE BUTTON FOUND!!!");
+            return;
+        }
+
         RadioButtonGroup RBG = UQueryExtensions.Q<RadioButtonGroup>( SourceAsset.rootVisualElement,"Faction");
         if( RBG == null )
         {
             Debug.LogError("ERROR: NO FACTION RADIO BUTTON GROUP FOUND!!!");
             return;
         }
+
+        ListView ProfileList = UQueryExtensions.Q<ListView>( SourceAsset.rootVisualElement,"ProfileList");
+        if( ProfileList == null )
+        {
+            Debug.LogError("ERROR: NO PROFILE LIST VIEW FOUND!!!");
+            return;
+        }
+
         RBG.RegisterCallback<ChangeEvent<int>>( ( evt ) =>
             {
                     switch( evt.newValue )
@@ -414,12 +436,67 @@ public class UIManager : MonoBehaviour
             }
         );
 
-
-        Submit.clicked += () => { PlacementMemory.Decision.Decided = true; };
-        GenerateProfile.clicked += () => { DataManager.Instance.SaveProfile( in PlacementMemory.Decision.Piece );  };
-
+        //***************** Setting up the profile browser *****************//
         List<PieceRequest> InMemoryProfiles  = DataManager.Instance.LoadAllProfiles();
-        //TODO: Set the Data Source for the Profile Browser
+        List<int> ProfileIDsToBeDeleted = new List<int>();
+        Func<VisualElement> PB_MakeItem = () => ProfileListItem.Instantiate();
+        Action<VisualElement, int> PB_BindItem = ( e, i ) => {
+            e.dataSource = InMemoryProfiles[i];
+            Debug.Log($"Data Sourced: {InMemoryProfiles[i].Name}");
+        };
+
+        ProfileList.selectedIndicesChanged += ( newIndex ) =>
+        {
+            Debug.Log($"New Item Selected: {InMemoryProfiles[ProfileList.selectedIndex].Name}");
+        };
+
+        ProfileList.makeItem = PB_MakeItem;
+        ProfileList.bindItem = PB_BindItem;
+        ProfileList.itemsSource = InMemoryProfiles;
+        ProfileList.ClearSelection();
+
+
+        GenerateProfile.clicked += () => {
+            PlacementMemory.Decision.Piece.ProfileID = DataManager.Instance.GenerateProfileID();
+            DataManager.Instance.SaveProfile( in PlacementMemory.Decision.Piece );
+            PieceRequest NewPiece = PlacementMemory.Decision.Piece;
+            InMemoryProfiles.Add( NewPiece ); //NOTE: We add in the current profile we want to see currently
+            ProfileList.RefreshItems();
+        };
+
+        LoadProfile.clicked += () => {
+
+            if( InMemoryProfiles.Count > 0 )
+            {
+                int SelectedIndex = ProfileList.selectedIndex;
+                PlacementMemory.Decision.Piece.Name = InMemoryProfiles[SelectedIndex].Name;
+                PlacementMemory.Decision.Piece.Alignment = InMemoryProfiles[SelectedIndex].Alignment;
+                PlacementMemory.Decision.Piece.Health = InMemoryProfiles[SelectedIndex].Health;
+                PlacementMemory.Decision.Piece.MovementSpeed = InMemoryProfiles[SelectedIndex].MovementSpeed;
+            }
+            else
+            {
+                PlacementMemory.Decision.Piece.Name = InMemoryProfiles[0].Name;
+                PlacementMemory.Decision.Piece.Alignment = InMemoryProfiles[0].Alignment;
+                PlacementMemory.Decision.Piece.Health = InMemoryProfiles[0].Health;
+                PlacementMemory.Decision.Piece.MovementSpeed = InMemoryProfiles[0].MovementSpeed;
+            }
+
+            DataManager.Instance.DeleteProfiles( ProfileIDsToBeDeleted );
+            PlacementMemory.Decision.Decided = true;
+        };
+
+        DeleteProfile.clicked += () => {
+            ProfileIDsToBeDeleted.Add( InMemoryProfiles[ ProfileList.selectedIndex ].ProfileID );
+            InMemoryProfiles.RemoveAt( ProfileList.selectedIndex );
+            ProfileList.RefreshItems();
+        };
+
+        Submit.clicked += () => {
+            DataManager.Instance.DeleteProfiles( ProfileIDsToBeDeleted );
+            PlacementMemory.Decision.Decided = true;
+        };
+
     }
 
     public void

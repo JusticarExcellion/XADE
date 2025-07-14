@@ -25,6 +25,7 @@ PieceState : int
 public struct
 PieceRequest
 {
+    public int ProfileID;
     public string Name;
     public Faction Alignment;
     public int Health;

@@ -8,6 +8,7 @@ using System.Collections;
 public class DataManager : MonoBehaviour
 {
     public static DataManager Instance;
+    private List<int> ProfileIDs;
 
     private string ProfileFilePath = Application.dataPath + "/Profiles/Profiles.dat";
 
@@ -21,6 +22,7 @@ public class DataManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad( this );
+        ProfileIDs = new List<int>();
     }
 
     //TODO: We should save all entities and their state
@@ -39,25 +41,19 @@ public class DataManager : MonoBehaviour
 
     public void
     SaveProfile( in PieceRequest NewProfile )
-    { //TODO: We May need to create unique ID's for each profile so we can delete specific Profiles that may have similar stats
+    {
         using( FileStream ProfileStream = new FileStream( ProfileFilePath, FileMode.Append, FileAccess.Write ))
         {
             using ( StreamWriter ProfileWriter = new StreamWriter( ProfileStream ) )
             {
                 ProfileWriter.WriteLine($"Name: {NewProfile.Name}");
+                ProfileWriter.WriteLine($"ID: { NewProfile.ProfileID }");
                 ProfileWriter.WriteLine($"Alignment: {(int)NewProfile.Alignment}");
                 ProfileWriter.WriteLine($"Max Health: {NewProfile.Health}");
                 ProfileWriter.WriteLine($"Move Speed: {NewProfile.MovementSpeed}");
             }
         }
         Debug.Log("New Profile Written To Profiles.dat");
-    }
-
-    public void
-    LoadProfile( PieceRequest Profile )
-    {
-        //TODO: Make a profile browser then we can pick a item from the
-        //browser and load it here
     }
 
     public List<PieceRequest>
@@ -74,53 +70,78 @@ public class DataManager : MonoBehaviour
                 while( ProfileReader.Peek() > 0 )
                 {
                     CurrentLine = ProfileReader.ReadLine();
-                    if( String.Equals(CurrentLine.Substring(0,4), "Name") )
-                    {
-                        int NameLength = CurrentLine.Length - 6;
-                        if( CurrentProfile.Name != "" )
-                        {
-                            CurrentProfile = new PieceRequest();
-                        }
-                        CurrentProfile.Name = CurrentLine.Substring(6,NameLength);
-                        Debug.Log($"Name Found: {CurrentProfile.Name}");
-                        continue;
-                    }
+                    int LineLength = CurrentLine.Length; //NOTE: Validate Line is long enough to peek it 
 
-                    if(String.Equals( CurrentLine.Substring(0,9), "Alignment"))
+                    if( LineLength > 6 )
                     {
-                        int Value;
-                        if( Int32.TryParse( CurrentLine.Substring(11,1), out Value ) )
+                        if( String.Equals(CurrentLine.Substring(0,4), "Name") )
                         {
-                            CurrentProfile.Alignment = (Faction)Value;
-                            Debug.Log($"Alignment for {CurrentProfile.Name}, they are {CurrentProfile.Alignment}");
+                            int NameLength = CurrentLine.Length - 6;
+                            if( CurrentProfile.Name != "" )
+                            {
+                                CurrentProfile = new PieceRequest();
+                            }
+                            CurrentProfile.Name = CurrentLine.Substring(6,NameLength);
+                            Debug.Log($"Name Found: {CurrentProfile.Name}");
                             continue;
                         }
                     }
 
-                    if(String.Equals(CurrentLine.Substring(0,10), "Max Health"))
+                    if( LineLength > 4 )
                     {
-                        int HealthValueLength = CurrentLine.Length - 11;
-                        int Value;
-                        if( Int32.TryParse( CurrentLine.Substring(11,HealthValueLength), out Value ) )
+                        if( String.Equals(CurrentLine.Substring(0,2), "ID" ))
                         {
-                            CurrentProfile.Health = Value;
-                            Debug.Log($"Max health found for {CurrentProfile.Name}, there health is: {CurrentProfile.Health}");
-                            continue;
+                            int IDLength = CurrentLine.Length - 4;
+                            int Value;
+                            if( Int32.TryParse( CurrentLine.Substring(4,IDLength ), out Value ) )
+                            {
+                                CurrentProfile.ProfileID = Value;
+                                Debug.Log($"ProfileID found for {CurrentProfile.Name}, there ID is: {CurrentProfile.ProfileID}");
+                                LoadedProfiles.Add( CurrentProfile );
+                                continue;
+                            }
                         }
                     }
 
-                    if(String.Equals(CurrentLine.Substring(0,10), "Move Speed"))
+                    if( LineLength >= 10 )
                     {
-                        int MoveSpeedLength = CurrentLine.Length - 11;
-                        int Value;
-                        if( Int32.TryParse( CurrentLine.Substring(11,MoveSpeedLength), out Value ) )
+                        if(String.Equals( CurrentLine.Substring(0,9), "Alignment"))
                         {
-                            CurrentProfile.MovementSpeed = Value;
-                            Debug.Log($"Move Speed found for {CurrentProfile.Name}, there move speed is: {CurrentProfile.MovementSpeed}");
-                            LoadedProfiles.Add( CurrentProfile );
-                            continue;
+                            int Value;
+                            if( Int32.TryParse( CurrentLine.Substring(11,1), out Value ) )
+                            {
+                                CurrentProfile.Alignment = (Faction)Value;
+                                Debug.Log($"Alignment for {CurrentProfile.Name}, they are {CurrentProfile.Alignment}");
+                                continue;
+                            }
                         }
+
+                        if(String.Equals(CurrentLine.Substring(0,10), "Max Health"))
+                        {
+                            int HealthValueLength = CurrentLine.Length - 11;
+                            int Value;
+                            if( Int32.TryParse( CurrentLine.Substring(11,HealthValueLength), out Value ) )
+                            {
+                                CurrentProfile.Health = Value;
+                                Debug.Log($"Max health found for {CurrentProfile.Name}, there health is: {CurrentProfile.Health}");
+                                continue;
+                            }
+                        }
+
+                        if(String.Equals(CurrentLine.Substring(0,10), "Move Speed"))
+                        {
+                            int MoveSpeedLength = CurrentLine.Length - 11;
+                            int Value;
+                            if( Int32.TryParse( CurrentLine.Substring(11,MoveSpeedLength), out Value ) )
+                            {
+                                CurrentProfile.MovementSpeed = Value;
+                                Debug.Log($"Move Speed found for {CurrentProfile.Name}, there move speed is: {CurrentProfile.MovementSpeed}");
+                                continue;
+                            }
+                        }
+
                     }
+
 
                 }
             }
@@ -129,10 +150,66 @@ public class DataManager : MonoBehaviour
     }
 
     public bool
-    DeleteProfile()
+    DeleteProfiles( List<int> ProfilesToDelete )
     {
-        //TODO: Implement Delete Profile
-        return true;
+        //NOTE: There is a much better way to do this, that should
+        //involve hash tables and operating on a In memory profile table
+        List<PieceRequest> Profiles = LoadAllProfiles();
+
+        using( FileStream ProfileStream = new FileStream( ProfileFilePath, FileMode.Create, FileAccess.Write ))
+        {
+            Debug.Log("Overwrite Profile Written to Profile.dat");
+        }
+
+        foreach( PieceRequest Profile in Profiles )
+        {
+            bool IDToDelete = false;
+            for( int i = 0; i < ProfilesToDelete.Count; i++)
+            {
+                if( Profile.ProfileID == ProfilesToDelete[i] )
+                {
+                    IDToDelete = true;
+                    ProfilesToDelete.RemoveAt( i );
+                    break;
+                }
+            }
+
+            if( !IDToDelete )
+            {
+                SaveProfile( in Profile );
+            }
+
+        }
+       return true;
+    }
+
+    public int
+    GenerateProfileID()
+    {
+        int ID = 0;
+        bool ValidID = false;
+        int index = 0;
+        if( ProfileIDs.Count > 0 )
+        {
+            while( !ValidID )
+            { //NOTE: loop is exponential as we loop through the table for each element. Could be optimzed to reduce some collisions.
+                ID = ProfileIDs[index]++;
+                for( int subIndex = 0; subIndex < ProfileIDs.Count; subIndex++ )
+                {
+                    if( ID == ProfileIDs[ subIndex ] )
+                    {
+                        ValidID = false;
+                        break;
+                    }
+                    else
+                    {
+                        ValidID = true;
+                    }
+                }
+                index++;
+            }
+        }
+        return ID;
     }
 
 }
