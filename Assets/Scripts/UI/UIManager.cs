@@ -47,7 +47,7 @@ PieceLabel
 }
 
 public class
-ActionRequest //TODO: Consider changing this so we can incorporate different things like healing, stat boosts, Damage, etc
+ActionRequest
 {
     public GamePiece SourcePiece;
     public GamePiece DestinationPiece;
@@ -70,12 +70,14 @@ public class UIManager : MonoBehaviour
     private const string HealRequestDocumentPath   = "UI/HealRequest";
     private const string MusicBrowserDocumentPath  = "UI/MusicBrowser";
     private const string RadialPrefabPath          = "UI/Radial";
+    private const string InitiativeViewPath        = "UI/InitiativeListView";
     private const string GamePieceIconPath         = "Sprites/PieceIcon";
     private const string ObstacleIconPath          = "Sprites/ObstaclesIcon";
     private const string AttackIconPath            = "Sprites/AttackIcon";
     private const string HealingIconPath           = "Sprites/HealingIcon";
     private const string PlayButtonIconPath        = "Sprites/PlayIcon";
     private const string PauseButtonIconPath       = "Sprites/PauseIcon";
+    private const string AudioObjectIconPath       = "Sprites/AudioObjectIcon";
 
     private VisualTreeAsset SurpriseDocument;
     private VisualTreeAsset CharacterProfileDocument;
@@ -84,6 +86,7 @@ public class UIManager : MonoBehaviour
     private VisualTreeAsset DamageRequestDocument;
     private VisualTreeAsset HealRequestDocument;
     private VisualTreeAsset MusicBrowserDocument;
+    private VisualTreeAsset InitiativeViewAsset;
 
     private GameObject BannerPrefab;
     private GameObject PieceLabelPrefab;
@@ -97,11 +100,13 @@ public class UIManager : MonoBehaviour
     private Sprite HealingIcon;
     private Sprite PlayIcon;
     private Sprite PauseIcon;
-
+    private Sprite AudioObjectIcon;
 
     [Header("UI Roots")]
     [SerializeField]
     private UIDocument SourceAsset;
+    [SerializeField]
+    private UIDocument InitiativeViewDocument;
     [SerializeField]
     private GameObject Canvas;
 
@@ -111,6 +116,10 @@ public class UIManager : MonoBehaviour
     [Header("Profile Browser")]
     [SerializeField]
     private VisualTreeAsset ProfileListItem;
+    [Header("Initiative View List")]
+    [SerializeField]
+    private VisualTreeAsset InitiativeViewItem;
+
 
     private RectTransform CanvasTransform;
     private PieceLabel[] PieceLabels;
@@ -273,6 +282,20 @@ public class UIManager : MonoBehaviour
             Valid = false;
         }
 
+        if( InitiativeViewDocument == null )
+        {
+            Debug.LogError("ERROR: NO INITIATIVE VIEW UI DOCUMENT FOUND!!!");
+            Valid = false;
+
+        }
+
+        InitiativeViewAsset = Resources.Load<VisualTreeAsset>(InitiativeViewPath);
+        if( InitiativeViewAsset == null)
+        {
+            Debug.LogError("ERROR: NO INITIATIVE VIEW FOUND!!!");
+            Valid = false;
+        }
+
         PieceLabels = new PieceLabel[64];
         NumberOfLabels = 0;
 
@@ -335,6 +358,7 @@ public class UIManager : MonoBehaviour
     public void
     DisplayCharacterProfile( PlacementMemory PlacementMemory )
     {
+        InitiativeViewClose();
         SourceAsset.visualTreeAsset = CharacterProfileDocument;
         Button Submit = UQueryExtensions.Q<Button>( SourceAsset.rootVisualElement,"Submit");
         if( Submit == null )
@@ -484,6 +508,7 @@ public class UIManager : MonoBehaviour
 
             DataManager.Instance.DeleteProfiles( ProfileIDsToBeDeleted );
             PlacementMemory.Decision.Decided = true;
+            InitiativeViewOpen();
         };
 
         DeleteProfile.clicked += () => {
@@ -495,6 +520,7 @@ public class UIManager : MonoBehaviour
         Submit.clicked += () => {
             DataManager.Instance.DeleteProfiles( ProfileIDsToBeDeleted );
             PlacementMemory.Decision.Decided = true;
+            InitiativeViewOpen();
         };
 
     }
@@ -572,6 +598,7 @@ public class UIManager : MonoBehaviour
     private void
     UpdateLabels()
     {
+        //TODO: Update labels and scale them based on distance
         GameObject Label;
         GameObject Piece;
         for( int i = 0; i < NumberOfLabels; i++ )
@@ -587,15 +614,24 @@ public class UIManager : MonoBehaviour
             }
 
             Vector3 PiecePosition = Piece.transform.position;
-            PiecePosition.y += 0.5f;
-            Vector3 ViewportPoint = Camera.main.WorldToViewportPoint( PiecePosition );
-            Vector3 CanvasPoint = new Vector3(
-                    ( ( ViewportPoint.x * CanvasTransform.sizeDelta.x ) - (CanvasTransform.sizeDelta.x * 0.5f ) ),
-                    ( ( ViewportPoint.y * CanvasTransform.sizeDelta.y ) - (CanvasTransform.sizeDelta.y * 0.5f ) ),
-                    0
-                    );
+            PiecePosition.y += 0.75f;
+            Vector3 ScreenPoint = Camera.main.WorldToScreenPoint( PiecePosition );
+            if( ScreenPoint.x > 0 && ScreenPoint.x < (Screen.width - 1) && ScreenPoint.y > 0 && ScreenPoint.y < (Screen.height - 1) && ScreenPoint.z > 0 )
+            {
+                if( !Label.activeSelf ) Label.SetActive( true );
+                Vector3 ViewportPoint = Camera.main.WorldToViewportPoint( PiecePosition );
+                Vector3 CanvasPoint = new Vector3(
+                        ( ( ViewportPoint.x * CanvasTransform.sizeDelta.x ) - (CanvasTransform.sizeDelta.x * 0.5f ) ),
+                        ( ( ViewportPoint.y * CanvasTransform.sizeDelta.y ) - (CanvasTransform.sizeDelta.y * 0.5f ) ),
+                        0
+                        );
 
-            LabelTransform.anchoredPosition = CanvasPoint;
+                LabelTransform.anchoredPosition = CanvasPoint;
+            }
+            else
+            {
+                if( Label.activeSelf ) Label.SetActive( false );
+            }
         }
     }
 
@@ -612,15 +648,26 @@ public class UIManager : MonoBehaviour
             Debug.Break();
         }
 
-        Vector3 ViewportPoint = Camera.main.WorldToViewportPoint( LineMidpoint );
-        Vector3 CanvasPoint = new Vector3(
-                ( ( ViewportPoint.x * CanvasTransform.sizeDelta.x ) - (CanvasTransform.sizeDelta.x * 0.5f ) ),
-                ( ( ViewportPoint.y * CanvasTransform.sizeDelta.y ) - (CanvasTransform.sizeDelta.y * 0.5f ) ),
-                0
-                );
+        GameObject Label = DistanceLabel.gameObject;
+        Vector3 ScreenPoint = Camera.main.WorldToScreenPoint( LineMidpoint );
+        if( ScreenPoint.x > 0 && ScreenPoint.x < (Screen.width - 1) && ScreenPoint.y > 0 && ScreenPoint.y < (Screen.height - 1) && ScreenPoint.z > 0 )
+        {
+            if( !Label.activeSelf ) Label.SetActive( true );
+            Vector3 ViewportPoint = Camera.main.WorldToViewportPoint( LineMidpoint );
+            Vector3 CanvasPoint = new Vector3(
+                    ( ( ViewportPoint.x * CanvasTransform.sizeDelta.x ) - (CanvasTransform.sizeDelta.x * 0.5f ) ),
+                    ( ( ViewportPoint.y * CanvasTransform.sizeDelta.y ) - (CanvasTransform.sizeDelta.y * 0.5f ) ),
+                    0
+                    );
 
-        LabelTransform.anchoredPosition = CanvasPoint;
-        DistanceLabel.SetLabelText( LabelText );
+            LabelTransform.anchoredPosition = CanvasPoint;
+            DistanceLabel.SetLabelText( LabelText );
+        }
+        else
+        {
+            if( Label.activeSelf ) Label.SetActive( false );
+        }
+
     }
 
     public void
@@ -632,6 +679,7 @@ public class UIManager : MonoBehaviour
     public void
     DisplayEditCharacterScreen( EditDecision Decision )
     {
+        InitiativeViewClose();
         SourceAsset.visualTreeAsset = EditCharacterDocument;
 
         TextField NameField = UQueryExtensions.Q<TextField>( SourceAsset.rootVisualElement,"Name");
@@ -694,6 +742,7 @@ public class UIManager : MonoBehaviour
                 PieceLabels[i].Script.SetText( Piece.Name );
             }
             Decision.Piece.SetPieceValues( Decision.Request );
+            InitiativeViewOpen();
         };
 
     }
@@ -824,10 +873,17 @@ public class UIManager : MonoBehaviour
             ObstacleIcon = Resources.Load<Sprite>( ObstacleIconPath );
         }
 
+        if( AudioObjectIcon == null )
+        {
+            AudioObjectIcon = Resources.Load<Sprite>( AudioObjectIconPath );
+        }
+
         Menu.SetRadialButtonIcon( 0, GamePieceIcon );
         Menu.SetRadialButtonIcon( 1, ObstacleIcon  );
         Menu.SetRadialButtonName( 0, "Create New Piece" );
         Menu.SetRadialButtonName( 1, "Create New Obstacle" );
+        Menu.SetRadialButtonIcon( 2, AudioObjectIcon );
+        Menu.SetRadialButtonName( 2, "Create Audio Object" );
 
         Menu.CanvasTransform = CanvasTransform;
         Menu.PivotPoint = Memory.Decision.SpawnPoint;
@@ -843,6 +899,15 @@ public class UIManager : MonoBehaviour
                 Debug.Log("Create Obstacle");
 
                 GameManager.Instance.AdvancePlacementState();
+                RadialWheel = null;
+                Menu.ClearRadial();
+                });
+
+        Menu.Buttons[2].Button.onClick.AddListener( delegate {
+                Debug.Log("Create Audio Object");
+
+                AudioManager.Instance.PlaySFXAt( Memory.Decision.SpawnPoint );
+
                 RadialWheel = null;
                 Menu.ClearRadial();
                 });
@@ -900,6 +965,7 @@ public class UIManager : MonoBehaviour
     public void
     ShowMusicBrowser()
     {
+        InitiativeViewClose();
         SourceAsset.visualTreeAsset = MusicBrowserDocument;
 
         Background PlayButtonIcon = new Background();
@@ -1089,6 +1155,7 @@ public class UIManager : MonoBehaviour
         ExitButton.clicked += () =>
         {
             ClearUI();
+            InitiativeViewOpen();
         };
 
     }
@@ -1100,12 +1167,48 @@ public class UIManager : MonoBehaviour
     }
 
     public void
-    CreateNewProfile()
+    InitiativeViewStart()
     {
+        InitiativeViewDocument.visualTreeAsset = InitiativeViewAsset;
+
+        ScrollView InitiativeList = UQueryExtensions.Q<ScrollView>( InitiativeViewDocument.rootVisualElement,"InitiativeList");
+        if( InitiativeList == null )
+        {
+            Debug.LogError("ERROR: NO INITIATIVE LIST FOUND!!!");
+        }
+
+        InitiativePiece[] InitiativeOrder = GameManager.Instance.InitiativeList.GetList();
+        foreach( InitiativePiece Piece in InitiativeOrder )
+        {
+            VisualElement newElement = InitiativeViewItem.CloneTree();
+            newElement.dataSource = Piece.Piece;
+            InitiativeList.Add( newElement );
+            Debug.Log($"Data Sourced: {Piece.Piece.Name}");
+        }
+
     }
 
     public void
-    LoadAllProfiles()
+    InitiativeViewRefresh()
     {
+    }
+
+
+    public void
+    InitiativeViewOpen()
+    {
+        if( InitiativeViewDocument.rootVisualElement != null )
+        {
+            InitiativeViewDocument.rootVisualElement.style.display = DisplayStyle.Flex;
+        }
+    }
+
+    public void
+    InitiativeViewClose()
+    {
+        if( InitiativeViewDocument.rootVisualElement != null )
+        {
+            InitiativeViewDocument.rootVisualElement.style.display = DisplayStyle.None;
+        }
     }
 }

@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
+//TODO: Make a command class and have everything be filtered through a command
+//interface so we can undo and redo everything at will
+
 public enum
 CombatOrder : int
 {
@@ -74,7 +77,7 @@ GameManager : MonoBehaviour
     private LayerMask GamePiece_LM;
 
     private GamePiece[] GamePieces;
-    private GamePieceList InitiativeList;
+    public  GamePieceList InitiativeList;
     private Faction SurpriseFaction;
     private CombatOrder CurrentState;
     private GamePieceTurnOrder CurrentTurnState;
@@ -166,6 +169,32 @@ GameManager : MonoBehaviour
     }
 
     private void
+    RestartFight( )
+    {
+        UIManager.Manager.ClearUI();
+        CurrentState = 0;
+        NumberOfPieces = 0;
+        CurrentTurn = 1;
+        StateSwitch = true;
+        Hovering = false;
+        SelectedObject = null;
+        HoverObject = null;
+        EditDecision = null;
+        MeasurePivotPoint = Vector3.zero;
+        CurrentTurnState = GamePieceTurnOrder.None;
+        EditorMode = EditorMode.Play;
+
+        Placement  = new PlacementMemory();
+        Placement.Decision = null;
+
+        Initiative = new InitiativeMemory();
+        Initiative.Decision = null;
+
+        GamePieces = new GamePiece[64];
+        Debug.Log("Fight Restarted");
+    }
+
+    private void
     Start()
     {
     }
@@ -173,12 +202,17 @@ GameManager : MonoBehaviour
     private void
     Update()
     {
+
+        if( Input.GetKeyDown( KeyCode.R ) && Input.GetKey( KeyCode.LeftShift ) )
+        {
+            RestartFight();
+        }
+
         if( Input.GetKeyDown( KeyCode.LeftControl ) )
         {
             if( EditorMode != EditorMode.Edit )
             {
                 UIManager.Manager.DisplayEditSign();
-                DisableMeasureMode();
                 StartEditPieces = NumberOfPieces;
                 EditorMode = EditorMode.Edit;
                 Debug.Log("Enable Edit Mode");
@@ -235,7 +269,6 @@ GameManager : MonoBehaviour
                 if( StateSwitch )
                 {
                     Debug.Log("Measure Mode");
-                    DrawHelper.Instance.SetLineColor( Color.green );
                     StateSwitch = false;
                 }
                 MeasureMode();
@@ -264,7 +297,6 @@ GameManager : MonoBehaviour
                 if( TargetObject != null && TargetObject != CurrentPiece )
                 {
                     TargetObject.OnObjectTarget();
-                    DrawHelper.Instance.SetLineColor( Color.red );
                 }
             }
 
@@ -299,10 +331,6 @@ GameManager : MonoBehaviour
             TargetObject = null;
             HoverObject = null;
             Hovering = false;
-            if( DrawHelper.Instance.DrawingLine() )
-            {
-                DrawHelper.Instance.SetLineColor( Color.blue );
-            }
         }
 
         if( Physics.Raycast( WorldRay.origin, WorldRay.direction, out hit, 100f,  Terrain_LM ) )
@@ -364,6 +392,7 @@ GameManager : MonoBehaviour
         {
             Debug.Log("Cancelled Current Placement");
             UIManager.Manager.ClearUI();
+            UIManager.Manager.InitiativeViewOpen();
             Placement.State = 0;
             Placement.Decision = null;
             Placement.StateTransition = false;
@@ -489,13 +518,19 @@ GameManager : MonoBehaviour
             else
             {
                 CurrentTurnState = GamePieceTurnOrder.None;
-                DrawHelper.Instance.DisableLine();
             }
         }
 
         if( CurrentTurnState == GamePieceTurnOrder.MoveMode )
         {
-            DrawHelper.Instance.DrawLineStartEnd( CurrentPiece.transform.position, MousePointOnFloor, CurrentPiece.MovementSpeed );
+            if(TargetObject != null)
+            {
+                DrawHelper.Instance.DrawLineStartEnd( CurrentPiece.transform.position, MousePointOnFloor, CurrentPiece.MovementSpeed, Color.red );
+            }
+            else
+            {
+                DrawHelper.Instance.DrawLineStartEnd( CurrentPiece.transform.position, MousePointOnFloor, CurrentPiece.MovementSpeed, Color.blue );
+            }
             if( Input.GetMouseButtonDown( 0 ) )
             {
                 if( TargetObject != null )
@@ -511,7 +546,6 @@ GameManager : MonoBehaviour
                 }
 
                 CurrentTurnState = GamePieceTurnOrder.None;
-                DrawHelper.Instance.DisableLine();
             }
 
         }
@@ -595,6 +629,7 @@ GameManager : MonoBehaviour
                     Debug.Log("Order: Start Fight");
                     StateSwitch = false;
                     ChooseTurn();
+                    UIManager.Manager.InitiativeViewStart();
                 }
 
                 break;
@@ -670,7 +705,6 @@ GameManager : MonoBehaviour
             }
             else
             {
-                DisableMeasureMode();
                 EditorMode = EditorMode.Play;
                 StateSwitch = true;
             }
@@ -687,7 +721,6 @@ GameManager : MonoBehaviour
         }
         else
         {
-            DrawHelper.Instance.DisableLine();
         }
     }
 
@@ -695,8 +728,6 @@ GameManager : MonoBehaviour
     DisableMeasureMode()
     {
         MeasurePivotPoint = Vector3.zero;
-        DrawHelper.Instance.SetLineColor( Color.blue );
-        DrawHelper.Instance.DisableLine();
     }
 
     public void

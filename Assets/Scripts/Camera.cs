@@ -14,9 +14,9 @@ CameraMovement : MonoBehaviour
     [SerializeField]
     private float CameraZoomSpeed;
     [SerializeField]
-    private float MaxHeight;
+    private float MaxCamHeight;
     [SerializeField]
-    private float MinHeight;
+    private float MinCamHeight;
     [SerializeField]
     private float OffsetWeight;
     [SerializeField]
@@ -24,12 +24,27 @@ CameraMovement : MonoBehaviour
     [SerializeField]
     private float CameraRotationAmount;
 
+    private int CurrentLevel;
+
+    [SerializeField]
+    private Transform CurrentLevelTransform;
     private Transform CameraTransform;
+    private MultiLevelControls MLC;
 
     private void
     Awake()
     {
         CameraTransform = MainCamera.transform;
+        MLC = FindFirstObjectByType<MultiLevelControls>();
+        if( MLC == null )
+        {
+            Debug.LogError("ERROR: NO MULTI LEVEL CONTROL FOUND!!!");
+        }
+        else
+        {
+            CurrentLevelTransform = MLC.Levels[0].transform;
+        }
+        CurrentLevel = 0;
     }
 
     private void
@@ -37,21 +52,29 @@ CameraMovement : MonoBehaviour
     {
         Vector2 ScrollDelta = Input.mouseScrollDelta;
         Vector3 CurrentPosition = LookAtPoint.position;
-        Vector3 OffsetPosition = CameraTransform.position;
-        float OffsetZ = ( ( ( CameraTransform.position.y - MinHeight ) / ( MaxHeight - MinHeight ) ) * OffsetWeight ) - OffsetWeight;
+        Vector3 LookAtPosition = LookAtPoint.position;
+        Vector3 CameraPosition = CameraTransform.position;
+        Vector3 OffsetPosition = CameraPosition;
+        float MinLevelCameraHeight = MinCamHeight + LookAtPosition.y;
+        float MaxLevelCameraHeight = MaxCamHeight + LookAtPosition.y;
+
+        float CurrentOffsetFactor = ( CameraPosition.y -  MinLevelCameraHeight ) / ( MaxLevelCameraHeight - MinLevelCameraHeight );
+        float OffsetZ = ( CurrentOffsetFactor * OffsetWeight ) - OffsetWeight;
         OffsetPosition = CurrentPosition + ( LookAtPoint.forward * OffsetZ );
-        OffsetPosition.y = CameraTransform.position.y + ScrollDelta.y * CameraZoomSpeed;
-        OffsetPosition.y = Mathf.Clamp( OffsetPosition.y, MinHeight, MaxHeight );
+        OffsetPosition.y = CameraPosition.y + ScrollDelta.y * CameraZoomSpeed;
+
+
+        OffsetPosition.y = Mathf.Clamp( OffsetPosition.y, MinLevelCameraHeight, MaxLevelCameraHeight );
+
         CameraTransform.position = OffsetPosition;
 
-        Vector3 LookAtPosition = LookAtPoint.position;
         Vector3 CameraVector = new Vector3();
         if( Input.GetMouseButton( 2 ) )
         {
             Vector3 MouseDelta = Input.mousePositionDelta;
             CameraVector += ( LookAtPoint.forward * -MouseDelta.y );
             CameraVector += ( LookAtPoint.right * -MouseDelta.x );
-            CameraVector.y = 0;
+            CameraVector.y = CurrentLevelTransform.position.y;
         }
 
         if( !UIManager.Manager.TextModeActive() )
@@ -77,20 +100,50 @@ CameraMovement : MonoBehaviour
                 CameraVector += LookAtPoint.right;
             }
 
+            if( Input.GetKeyDown( KeyCode.Z ) )
+            {//Move Up
+                CurrentLevel++;
+                if( CurrentLevel >= MLC.Levels.Length )
+                {
+                    CurrentLevel = MLC.Levels.Length - 1;
+                }
+                else
+                {
+                    CurrentLevelTransform = MLC.Levels[CurrentLevel].transform;
+                }
+            }
+
+            if( Input.GetKeyDown( KeyCode.X ) )
+            {//Move Down
+                CurrentLevel--;
+                if( CurrentLevel > -1 )
+                {
+                    CurrentLevelTransform = MLC.Levels[CurrentLevel].transform;
+                }
+                else
+                {
+                    CurrentLevel = 0;
+                }
+            }
+
         }
 
-        CameraVector *= CameraMoveSpeed;
+        float CurrentSpeed = (2 * CameraMoveSpeed) * CurrentOffsetFactor;
+        CurrentSpeed = Mathf.Clamp( CurrentSpeed, CameraMoveSpeed, ( 2 * CameraMoveSpeed ) );
+        CameraVector *= CurrentSpeed;
         LookAtPosition += CameraVector;
+        LookAtPosition.y = Mathf.Lerp( LookAtPosition.y, CurrentLevelTransform.position.y, Time.deltaTime );
         LookAtPoint.position = LookAtPosition;
 
+        Quaternion LookAtRotation = LookAtPoint.rotation;
         if( Input.GetKey( KeyCode.Q ) )
         {
-            LookAtPoint.rotation = Quaternion.Euler( LookAtPoint.rotation.eulerAngles.x, LookAtPoint.rotation.eulerAngles.y - CameraRotationAmount,LookAtPoint.rotation.eulerAngles.z );
+            LookAtPoint.rotation = Quaternion.Euler( LookAtRotation.eulerAngles.x, LookAtRotation.eulerAngles.y - CameraRotationAmount,LookAtRotation.eulerAngles.z );
         }
 
         if( Input.GetKey( KeyCode.E ) )
         {
-            LookAtPoint.rotation = Quaternion.Euler( LookAtPoint.rotation.eulerAngles.x, LookAtPoint.rotation.eulerAngles.y + CameraRotationAmount, LookAtPoint.rotation.eulerAngles.z );
+            LookAtPoint.rotation = Quaternion.Euler( LookAtRotation.eulerAngles.x, LookAtRotation.eulerAngles.y + CameraRotationAmount, LookAtRotation.eulerAngles.z );
         }
 
         Vector3 LookVector = LookAtPoint.position - OffsetPosition;

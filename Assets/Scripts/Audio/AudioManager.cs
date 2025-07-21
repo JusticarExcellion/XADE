@@ -82,11 +82,13 @@ AudioManager : MonoBehaviour
 {
     public static AudioManager Instance;
     private AudioSource MusicSource;
+    private AudioSource SFXSource;
     private AudioSource AmbienceSource;
     public static string MusicFolder    = "/Resources/Audio/Tracks/";
     public static string AmbienceFolder = "/Resources/Audio/Ambience/";
     public static string ResourceMusicPath    = "Audio/Tracks/";
     public static string ResourceAmbiencePath = "Audio/Ambience/";
+
     [HideInInspector]
     public AudioFile MusicFiles;
     [HideInInspector]
@@ -94,6 +96,8 @@ AudioManager : MonoBehaviour
 
     [SerializeField]
     private AudioMixerGroup Mixers;
+    [SerializeField]
+    private AudioClip MissingAudioFile;
 
     public void
     Awake()
@@ -116,12 +120,19 @@ AudioManager : MonoBehaviour
         bool Valid = true;
         MusicSource = this.gameObject.AddComponent<AudioSource>();
         AmbienceSource = this.gameObject.AddComponent<AudioSource>();
+        SFXSource = this.gameObject.AddComponent<AudioSource>();
+
         MusicSource.outputAudioMixerGroup = Mixers;
         AmbienceSource.outputAudioMixerGroup = Mixers;
+        SFXSource.outputAudioMixerGroup = Mixers;
+
         MusicSource.volume = .5f;
         AmbienceSource.volume = .25f;
+        SFXSource.volume = 1f;
+
         MusicSource.loop = true;
         AmbienceSource.loop = true;
+
         GetAllAudioTracksFromResources();
         return Valid;
     }
@@ -191,6 +202,20 @@ AudioManager : MonoBehaviour
     }
 
     public void
+    PlaySFXAt( Vector3 Position, AudioClip clip = null )
+    {
+
+        if( clip != null )
+        {
+            AudioSource.PlayClipAtPoint( clip, Position );
+        }
+        else
+        {
+            AudioSource.PlayClipAtPoint( MissingAudioFile, Position );
+        }
+    }
+
+    public void
     NextSong()
     {
     }
@@ -198,15 +223,6 @@ AudioManager : MonoBehaviour
     public void
     PrevSong()
     {
-    }
-
-    public void
-    CreateSoundObject( Vector3 Position, AudioClip Sound )
-    {
-        GameObject go = new GameObject();
-        go.transform.position = Position;
-        SoundObject SO = go.AddComponent< SoundObject >();
-        SO.StartSoundObject( Sound );
     }
 
     private void
@@ -253,5 +269,4 @@ AudioManager : MonoBehaviour
     {
         return AmbienceSource.isPlaying;
     }
-
 }

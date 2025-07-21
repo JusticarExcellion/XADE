@@ -1,11 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
+using DrawXXL;
 
 public class DrawHelper : MonoBehaviour
 {
     public static DrawHelper Instance;
-    private LineRenderer LR;
-    private Material Line_MAT;
 
     private void
     Awake()
@@ -17,84 +16,32 @@ public class DrawHelper : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad( this );
-        Initialize();
-    }
-
-    private void
-    Initialize()
-    {
-        LR = this.GetComponent<LineRenderer>();
-        Line_MAT = null;
-        if( LR == null )
-        {
-            Debug.LogError("ERROR: LINE RENDERER NOT FOUND");
-            return;
-        }
-        Line_MAT = LR.material;
-        LR.enabled = false;
-    }
-
-    private void
-    Start()
-    {
-    }
-
-    private void
-    Update()
-    {
     }
 
     public void
-    DrawLineStartEnd( Vector3 Start, Vector3 End, float MovementSpeed )
+    DrawLineStartEnd( Vector3 Start, Vector3 End, float MovementSpeed, Color color )
     {
-        LR.enabled = true;
         Vector3 Direction = End - Start;
-
         if( Direction.magnitude > MovementSpeed )
         {
             Direction.Normalize();
             Direction *= MovementSpeed;
             End = Start + Direction;
         }
+        Vector3 Midpoint = ( Start + (Direction * 0.5f) );
         float Distance = Direction.magnitude;
-        Vector3 LineMidpoint = Vector3.Lerp( Start, End, 0.5f );
-        if( Distance > .01f )
-        {
-            LR.SetPosition( 0, Start );
-            LR.SetPosition( 1, End   );
-            UIManager.Manager.DisplayLineDistance( LineMidpoint, Distance );
-        }
-
-    }
-
-    public void
-    DisableLine()
-    {
-        LR.enabled = false;
-        UIManager.Manager.DisableLineDistance();
-    }
-
-    public bool
-    DrawingLine()
-    {
-        return LR.enabled;
-    }
-
-    public void
-    SetLineColor( Color color )
-    {
-        Line_MAT.color = color;
+        string Text = $"Distance: {Distance}";
+        DrawText.WriteScreenspaceFramed( Text,  Midpoint );
+        DrawBasics.Vector( Start, End, color );
     }
 
     public void
     Measure( Vector3 Point1, Vector3 Point2 )
     {
-        LR.enabled = true;
-        Vector3 Direction = Point2 - Point1;
-        float Distance = Direction.magnitude;
-        Vector3 LineMidpoint = Vector3.Lerp( Point1, Point2, 0.5f );
-        LR.SetPosition( 0, Point1 );
-        LR.SetPosition( 1, Point2 );
-        UIManager.Manager.DisplayLineDistance( LineMidpoint, Distance );
+        Vector3 Direction = Point1 - Point2;
+        Vector3 Midpoint = (Point2 + (Direction * 0.5f) );
+        string Text = $"Distance: {Direction.magnitude}";
+        DrawText.WriteScreenspaceFramed( Text,  Midpoint );
+        DrawBasics.Vector( Point1, Point2, Color.green );
     }
 }

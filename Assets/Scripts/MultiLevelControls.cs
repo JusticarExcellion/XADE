@@ -3,18 +3,7 @@ using UnityEngine;
 
 public class MultiLevelControls : MonoBehaviour
 {
-    [SerializeField]
-    private GameObject[] Levels;
-
-    private void
-    Awake()
-    {
-    }
-
-    private void
-    Start()
-    {
-    }
+    public GameObject[] Levels;
 
     private void
     Update()

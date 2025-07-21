@@ -97,7 +97,20 @@ public class DataManager : MonoBehaviour
                             {
                                 CurrentProfile.ProfileID = Value;
                                 Debug.Log($"ProfileID found for {CurrentProfile.Name}, there ID is: {CurrentProfile.ProfileID}");
-                                LoadedProfiles.Add( CurrentProfile );
+                                bool InList = false;
+                                for( int i = 0; i < ProfileIDs.Count; i++ )
+                                {
+                                    if( Value == ProfileIDs[i] )
+                                    {
+                                        InList = true;
+                                        break;
+                                    }
+                                }
+
+                                if( !InList )
+                                {
+                                    ProfileIDs.Add( Value );
+                                }
                                 continue;
                             }
                         }
@@ -136,6 +149,7 @@ public class DataManager : MonoBehaviour
                             {
                                 CurrentProfile.MovementSpeed = Value;
                                 Debug.Log($"Move Speed found for {CurrentProfile.Name}, there move speed is: {CurrentProfile.MovementSpeed}");
+                                LoadedProfiles.Add( CurrentProfile );
                                 continue;
                             }
                         }
@@ -176,6 +190,7 @@ public class DataManager : MonoBehaviour
 
             if( !IDToDelete )
             {
+                Debug.Log($"Profile ID: {Profile.ProfileID}");
                 SaveProfile( in Profile );
             }
 
@@ -192,8 +207,9 @@ public class DataManager : MonoBehaviour
         if( ProfileIDs.Count > 0 )
         {
             while( !ValidID )
-            { //NOTE: loop is exponential as we loop through the table for each element. Could be optimzed to reduce some collisions.
-                ID = ProfileIDs[index]++;
+            {
+
+                ID = ProfileIDs[index] + 1;
                 for( int subIndex = 0; subIndex < ProfileIDs.Count; subIndex++ )
                 {
                     if( ID == ProfileIDs[ subIndex ] )
@@ -209,6 +225,7 @@ public class DataManager : MonoBehaviour
                 index++;
             }
         }
+        ProfileIDs.Add( index );
         return ID;
     }
 

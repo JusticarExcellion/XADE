@@ -304,6 +304,12 @@ GamePieceList
     { //TODO: Implement Removal
     }
 
+    public InitiativePiece[]
+    GetList()
+    {
+        return List;
+    }
+
     public GamePiece
     GetCurrent()
     {
